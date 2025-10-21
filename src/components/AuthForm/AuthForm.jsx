@@ -18,53 +18,8 @@ import FacebookIcon from "@mui/icons-material/Facebook";
 import { toast } from "react-toastify";
 import "./AuthForm.css";
 import api from "../../utils/services/api";
+import SocialIcon from "../SocialIcons/SocialIcon";
 
-const SocialIcon = ({ platform }) => {
-  if (platform === "facebook") {
-    return <FacebookIcon sx={{ color: "#1877f2", fontSize: 20 }} />;
-  }
-  if (platform === "google") {
-    return (
-      <Box
-        sx={{
-          width: 20,
-          height: 20,
-          bgcolor: "#4285f4",
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "12px",
-          color: "white",
-          fontWeight: "bold",
-        }}
-      >
-        G
-      </Box>
-    );
-  }
-  if (platform === "apple") {
-    return (
-      <Box
-        sx={{
-          width: 20,
-          height: 20,
-          bgcolor: "black",
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "12px",
-          color: "white",
-          fontWeight: "bold",
-        }}
-      >
-        A
-      </Box>
-    );
-  }
-  return null;
-};
 
 const AuthForm = () => {
   const [currentView, setCurrentView] = useState("login"); // 'login' | 'signup' | 'forgot'
@@ -79,7 +34,6 @@ const AuthForm = () => {
   const [formData, setFormData] = useState(defaultForm);
   const [errors, setErrors] = useState({});
 
-  // 👁️ State to toggle password visibility
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -89,7 +43,6 @@ const AuthForm = () => {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-  // ✅ Validation: matches backend rules
   const validateForm = () => {
     const newErrors = {};
 
@@ -106,22 +59,18 @@ const AuthForm = () => {
         if (formData.password.length < 8)
           newErrors.password = "Password must be at least 8 characters long";
         else if (!/[A-Z]/.test(formData.password))
-          newErrors.password =
-            "Password must contain at least one uppercase letter";
+          newErrors.password = "Password must contain an uppercase letter";
         else if (!/[a-z]/.test(formData.password))
-          newErrors.password =
-            "Password must contain at least one lowercase letter";
+          newErrors.password = "Password must contain a lowercase letter";
         else if (!/\d/.test(formData.password))
-          newErrors.password = "Password must contain at least one number";
-        else if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password))
-          newErrors.password =
-            "Password must contain at least one special character";
+          newErrors.password = "Password must contain a number";
+        else if (!/[!@#$%^&*(),.?\":{}|<>]/.test(formData.password))
+          newErrors.password = "Password must contain a special character";
       }
     }
 
     if (isSignup) {
       if (!formData.name.trim()) newErrors.name = "Name is required";
-
       if (!formData.confirmPassword)
         newErrors.confirmPassword = "Confirm Password is required";
       else if (formData.password !== formData.confirmPassword)
@@ -132,7 +81,6 @@ const AuthForm = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // 🧠 Handle backend validation array
   const handleBackendValidationErrors = (backendErrorsArray) => {
     if (!Array.isArray(backendErrorsArray)) return;
     const mapped = {};
@@ -143,14 +91,12 @@ const AuthForm = () => {
     setErrors((prev) => ({ ...prev, ...mapped }));
   };
 
-  // 🖊️ Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // 🚀 Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
@@ -196,7 +142,7 @@ const AuthForm = () => {
 
   const getTitle = () => {
     if (isForgot) return "Forgot Password";
-    if (isSignup) return "Create account";
+    if (isSignup) return "Create Account";
     return "Log in";
   };
 
@@ -207,35 +153,31 @@ const AuthForm = () => {
       return "Creating...";
     }
     if (isForgot) return "Continue";
-    if (isSignup) return "Create account";
+    if (isSignup) return "Create Account";
     return "Login";
   };
 
-  const getToggleConfig = () => {
-    if (isLogin) {
-      return {
+  const toggleConfig = isLogin
+    ? {
         prefix: "Don't have an account?",
-        action: "Sign up",
+        action: "Sign Up here",
         onClick: () => {
           setCurrentView("signup");
           setErrors({});
           setFormData(defaultForm);
         },
-      };
-    }
-    if (isSignup) {
-      return {
+      }
+    : isSignup
+    ? {
         prefix: "Already have an account?",
-        action: "Sign in",
+        action: "Sign In here",
         onClick: () => {
           setCurrentView("login");
           setErrors({});
           setFormData(defaultForm);
         },
-      };
-    }
-    if (isForgot) {
-      return {
+      }
+    : {
         prefix: "Remember your password?",
         action: "Log in",
         onClick: () => {
@@ -244,17 +186,18 @@ const AuthForm = () => {
           setFormData(defaultForm);
         },
       };
-    }
-    return { prefix: "", action: "", onClick: () => {} };
-  };
-
-  const toggleConfig = getToggleConfig();
 
   return (
     <Box className="auth-container">
       <Paper elevation={6} className="auth-box">
         <Zoom in={true}>
-          <Typography variant="h5" fontWeight="bold" align="center" mb={3}>
+          <Typography
+            variant="h5"
+            fontWeight="bold"
+            align="center"
+            mb={3}
+            sx={{ fontFamily: "Poppins, sans-serif" }}
+          >
             {getTitle()}
           </Typography>
         </Zoom>
@@ -264,33 +207,53 @@ const AuthForm = () => {
             {isSignup && (
               <Box mb={2}>
                 <TextField
-                  label="Name"
+                  placeholder="Name"
                   name="name"
                   fullWidth
                   value={formData.name}
                   onChange={handleChange}
                   error={!!errors.name}
                   helperText={errors.name}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <i
+                          className="fa-solid fa-user"
+                          style={{ color: "#888" }}
+                        ></i>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Box>
             )}
 
             <Box mb={2}>
               <TextField
-                label="Email address"
+                placeholder="Email address"
                 name="email"
                 fullWidth
                 value={formData.email}
                 onChange={handleChange}
                 error={!!errors.email}
                 helperText={errors.email}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <i
+                        className="fa-solid fa-envelope"
+                        style={{ color: "#888" }}
+                      ></i>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Box>
 
             {currentView !== "forgot" && (
               <Box mb={2}>
                 <TextField
-                  label="Password"
+                  placeholder="Password"
                   name="password"
                   type={showPassword ? "text" : "password"}
                   fullWidth
@@ -299,6 +262,14 @@ const AuthForm = () => {
                   error={!!errors.password}
                   helperText={errors.password}
                   InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <i
+                          className="fa-solid fa-lock"
+                          style={{ color: "#888" }}
+                        ></i>
+                      </InputAdornment>
+                    ),
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
@@ -318,7 +289,7 @@ const AuthForm = () => {
             {isSignup && (
               <Box mb={2}>
                 <TextField
-                  label="Confirm Password"
+                  placeholder="Confirm Password"
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   fullWidth
@@ -327,6 +298,14 @@ const AuthForm = () => {
                   error={!!errors.confirmPassword}
                   helperText={errors.confirmPassword}
                   InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <i
+                          className="fa-solid fa-lock"
+                          style={{ color: "#888" }}
+                        ></i>
+                      </InputAdornment>
+                    ),
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
@@ -372,9 +351,14 @@ const AuthForm = () => {
                     setErrors({});
                   }}
                   underline="hover"
-                  sx={{ p: 0, minWidth: "auto" }}
+                  sx={{
+                    p: 0,
+                    color: "black", // <-- changed to black text
+                    fontWeight: 500,
+                    "&:hover": { color: "#27AE60" },
+                  }}
                 >
-                  Forgot password?
+                  Forgot Password?
                 </Link>
               </Box>
             )}
@@ -393,11 +377,15 @@ const AuthForm = () => {
               sx={{
                 py: 1.3,
                 fontSize: "1rem",
-                borderRadius: "12px",
-                backgroundColor: "#27AE60", // main green
-                color: "#fff",
+                borderRadius: "30px",
+                backgroundColor: "#27AE60",
+                fontWeight: 600,
+                textTransform: "none",
+                fontFamily: "Poppins, sans-serif",
+                boxShadow: "0 4px 10px rgba(39, 174, 96, 0.3)",
                 "&:hover": {
-                  backgroundColor: "#219150", // slightly darker on hover
+                  backgroundColor: "#239954ff",
+                  boxShadow: "0 0 2px rgba(39, 174, 96, 0.5)",
                 },
               }}
             >
@@ -406,22 +394,10 @@ const AuthForm = () => {
           </form>
         </Fade>
 
-        <Box mt={3} textAlign="center">
+        <Box className="auth-toggle">
           <Typography variant="body2" color="text.secondary">
             {toggleConfig.prefix}{" "}
-            <Button
-              onClick={toggleConfig.onClick}
-              sx={{
-                textTransform: "none",
-                fontWeight: "bold",
-                // backgroundColor: "#27AE60", // main green
-                color: "#27AE60",
-                // "&:hover": {
-                //   backgroundColor: "#219150",
-                //   color:"#fff" // slightly darker on hover
-                // },
-              }}
-            >
+            <Button onClick={toggleConfig.onClick}>
               {toggleConfig.action}
             </Button>
           </Typography>
@@ -445,50 +421,15 @@ const AuthForm = () => {
             <Box sx={{ flex: 1, height: "1px", bgcolor: "grey.300" }} />
           </Box>
 
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 1.5,
-              mt: 2,
-            }}
-          >
-            <IconButton
-              size="small"
-              onClick={() => toast.info("Coming soon!")}
-              sx={{
-                p: 0.5,
-                border: "1px solid",
-                borderColor: "grey.300",
-                borderRadius: 1,
-              }}
-            >
-              <SocialIcon platform="facebook" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => toast.info("Coming soon!")}
-              sx={{
-                p: 0.5,
-                border: "1px solid",
-                borderColor: "grey.300",
-                borderRadius: 1,
-              }}
-            >
-              <SocialIcon platform="google" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => toast.info("Coming soon!")}
-              sx={{
-                p: 0.5,
-                border: "1px solid",
-                borderColor: "grey.300",
-                borderRadius: 1,
-              }}
-            >
-              <SocialIcon platform="apple" />
-            </IconButton>
+          <Box className="auth-social-icons">
+            {["facebook", "google", "apple"].map((platform) => (
+              <IconButton
+                key={platform}
+                onClick={() => toast.info("Coming soon!")}
+              >
+                <SocialIcon platform={platform} />
+              </IconButton>
+            ))}
           </Box>
         </Box>
       </Paper>

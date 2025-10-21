@@ -3,48 +3,100 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa, #ffffff);
+  background: #f3f4f6;
+  font-family: "Poppins", sans-serif;
   padding: 1rem;
 }
 
 .auth-box {
   width: 100%;
-  max-width: 420px;
-  padding: 2rem;
-  border-radius: 20px;
-  background-color: #fff;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  transition: all 0.4s ease-in-out;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 28px;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
 }
 
 .auth-box:hover {
   transform: translateY(-2px);
 }
 
-.MuiFormHelperText-root {
-  font-size: 0.85rem !important;
-  margin-top: 4px;
+.MuiInputBase-root {
+  border-radius: 24px !important;
+  background-color: #f8f9fb;
+}
+
+.MuiOutlinedInput-notchedOutline {
+  border-color: #e0e0e0 !important;
+}
+
+.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #bdbdbd !important;
 }
 
 .MuiInputLabel-root {
-  color: #666 !important;
+  font-family: "Poppins", sans-serif !important;
+  font-weight: 500;
+  color: #555 !important;
 }
 
-.MuiOutlinedInput-root {
-  border-radius: 12px !important;
+.MuiFormHelperText-root {
+  font-size: 0.8rem !important;
+}
+
+.auth-social-icons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.auth-social-icons button {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+}
+
+.auth-social-icons button:hover {
+  box-shadow: 0 0 8px rgba(39, 174, 96, 0.2);
+  transform: translateY(-2px);
+}
+
+.auth-toggle {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.auth-toggle button {
+  color: #27ae60;
+  text-transform: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.auth-toggle button:hover {
+  text-shadow: 0 0 0.5px rgba(39, 174, 96, 0.6);
 }
 
 @media (max-width: 600px) {
   .auth-box {
     max-width: 95%;
-    padding: 1.5rem;
-    border-radius: 16px;
+    padding: 1.8rem 1.4rem;
+    border-radius: 20px;
   }
 }
 
 @media (min-width: 1200px) {
   .auth-box {
-    max-width: 450px;
-    padding: 2.5rem;
+    max-width: 440px;
+    padding: 3rem 2.5rem;
   }
 }
