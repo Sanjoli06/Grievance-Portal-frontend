@@ -1,0 +1,40 @@
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #e3f2fd, #ffffff);
+  padding: 1rem;
+}
+
+.auth-box {
+  width: 100%;
+  max-width: 420px;
+  padding: 2rem;
+  border-radius: 16px;
+  background-color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s ease-in-out;
+}
+
+.auth-box:hover {
+  transform: scale(1.02);
+}
+
+.MuiFormHelperText-root {
+  font-size: 0.85rem !important;
+  margin-top: 4px;
+}
+
+@media (max-width: 600px) {
+  .auth-box {
+    max-width: 95%;
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .auth-box {
+    max-width: 450px;
+  }
+}
