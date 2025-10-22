@@ -86,6 +86,63 @@
   text-shadow: 0 0 0.5px rgba(39, 174, 96, 0.6);
 }
 
+.auth-step-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  min-height: 280px;
+}
+
+.auth-step {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  opacity: 0;
+  transform: translateX(30px);
+  transition: all 0.5s ease-in-out;
+  pointer-events: none;
+}
+
+.auth-step.active {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: all;
+}
+
+.back-arrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #27ae60;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  margin-bottom: 1rem;
+}
+
+.back-arrow:hover {
+  color: #1e8449;
+  text-decoration: underline;
+}
+
+@keyframes fadeSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-box {
+  animation: fadeSlideIn 0.6s ease;
+}
+
+
 @media (max-width: 600px) {
   .auth-box {
     max-width: 95%;

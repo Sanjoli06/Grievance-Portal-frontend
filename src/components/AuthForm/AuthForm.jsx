@@ -14,16 +14,22 @@ import {
   Link,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import FacebookIcon from "@mui/icons-material/Facebook";
 import { toast } from "react-toastify";
 import "./AuthForm.css";
-import api from "../../utils/services/api";
+import {
+  signupUser,
+  loginUser,
+  sendOtp,
+  verifyOtp,
+  resetPassword,
+} from "../../utils/services/api";
 import SocialIcon from "../SocialIcons/SocialIcon";
 
-
 const AuthForm = () => {
-  const [currentView, setCurrentView] = useState("login"); // 'login' | 'signup' | 'forgot'
+  const [currentView, setCurrentView] = useState("login"); 
   const [loading, setLoading] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); 
+  const [otp, setOtp] = useState("");
 
   const defaultForm = {
     name: "",
@@ -31,6 +37,7 @@ const AuthForm = () => {
     password: "",
     confirmPassword: "",
   };
+
   const [formData, setFormData] = useState(defaultForm);
   const [errors, setErrors] = useState({});
 
@@ -46,27 +53,20 @@ const AuthForm = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Please provide a valid email";
-    } else if (!emailRegex.test(formData.email.trim())) {
-      newErrors.email = "Please provide a valid email";
+    if (isForgot && forgotStep === 1) {
+      if (!formData.email.trim() || !emailRegex.test(formData.email.trim())) {
+        newErrors.email = "Please provide a valid email";
+      }
     }
 
-    if (currentView !== "forgot") {
-      if (!formData.password) {
-        newErrors.password = "Password is required";
-      } else {
-        if (formData.password.length < 8)
-          newErrors.password = "Password must be at least 8 characters long";
-        else if (!/[A-Z]/.test(formData.password))
-          newErrors.password = "Password must contain an uppercase letter";
-        else if (!/[a-z]/.test(formData.password))
-          newErrors.password = "Password must contain a lowercase letter";
-        else if (!/\d/.test(formData.password))
-          newErrors.password = "Password must contain a number";
-        else if (!/[!@#$%^&*(),.?\":{}|<>]/.test(formData.password))
-          newErrors.password = "Password must contain a special character";
+    if (isSignup || isLogin) {
+      if (!formData.email.trim() || !emailRegex.test(formData.email.trim())) {
+        newErrors.email = "Please provide a valid email";
       }
+    }
+
+    if ((isSignup || isLogin) && !formData.password) {
+      newErrors.password = "Password is required";
     }
 
     if (isSignup) {
@@ -100,32 +100,67 @@ const AuthForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
-
-    if (!validateForm()) return;
-
     setLoading(true);
+
     try {
       if (isForgot) {
-        toast.success(`Reset link sent to ${formData.email.trim()}`);
-        setFormData(defaultForm);
-        setCurrentView("login");
-      } else if (isLogin) {
-        const res = await api.post("/auth/login", {
+        if (forgotStep === 1) {
+          const otpResponse = await sendOtp({ email: formData.email.trim() });
+          toast.success(otpResponse.data.message || "OTP sent to your email!");
+          setForgotStep(2);
+        } else if (forgotStep === 2) {
+          if (!otp) {
+            setErrors({ otp: "OTP is required" });
+            setLoading(false);
+            return;
+          }
+          const verifyResponse = await verifyOtp({
+            email: formData.email.trim(),
+            otp,
+          });
+          if (!verifyResponse.data.success)
+            throw new Error("Invalid OTP! Try again.");
+          toast.success("OTP verified! Please enter your new password.");
+          setForgotStep(3);
+        } else if (forgotStep === 3) {
+          if (!formData.password || !formData.confirmPassword) {
+            setErrors({ password: "Password fields cannot be empty" });
+            setLoading(false);
+            return;
+          }
+          const resetResponse = await resetPassword({
+            email: formData.email.trim(),
+            otp,
+            password: formData.password,
+            confirmPassword: formData.confirmPassword,
+          });
+          toast.success(
+            resetResponse.data.message || "Password reset successful!"
+          );
+          setFormData(defaultForm);
+          setOtp("");
+          setForgotStep(1);
+          setCurrentView("login");
+        }
+      }
+
+      else if (isLogin) {
+        const res = await loginUser({
           email: formData.email.trim(),
           password: formData.password,
         });
-
         const { token, message } = res.data;
         if (token) localStorage.setItem("token", token);
         toast.success(message || "Login successful!");
-      } else {
-        const res = await api.post("/auth/signup", {
+      }
+
+      else if (isSignup) {
+        const res = await signupUser({
           name: formData.name.trim(),
           email: formData.email.trim(),
           password: formData.password,
           confirmPassword: formData.confirmPassword,
         });
-
         toast.success(res.data.message || "Signup successful!");
         setCurrentView("login");
         setFormData(defaultForm);
@@ -134,25 +169,36 @@ const AuthForm = () => {
       const backend = err.response?.data;
       if (backend?.errors) handleBackendValidationErrors(backend.errors);
       else if (backend?.message) setErrors({ general: backend.message });
-      else setErrors({ general: "Something went wrong. Please try again." });
+      else
+        setErrors({
+          general: err.message || "Something went wrong. Please try again.",
+        });
     } finally {
       setLoading(false);
     }
   };
 
   const getTitle = () => {
-    if (isForgot) return "Forgot Password";
+    if (isForgot) {
+      if (forgotStep === 1) return "Forgot Password";
+      if (forgotStep === 2) return "Enter OTP";
+      if (forgotStep === 3) return "Reset Password";
+    }
     if (isSignup) return "Create Account";
     return "Log in";
   };
 
   const getButtonText = () => {
     if (loading) {
-      if (isForgot) return "Sending...";
+      if (isForgot) return "Processing...";
       if (isLogin) return "Logging in...";
       return "Creating...";
     }
-    if (isForgot) return "Continue";
+    if (isForgot) {
+      if (forgotStep === 1) return "Send OTP";
+      if (forgotStep === 2) return "Verify OTP";
+      if (forgotStep === 3) return "Reset Password";
+    }
     if (isSignup) return "Create Account";
     return "Login";
   };
@@ -184,6 +230,7 @@ const AuthForm = () => {
           setCurrentView("login");
           setErrors({});
           setFormData(defaultForm);
+          setForgotStep(1);
         },
       };
 
@@ -196,8 +243,28 @@ const AuthForm = () => {
             fontWeight="bold"
             align="center"
             mb={3}
-            sx={{ fontFamily: "Poppins, sans-serif" }}
+            sx={{ fontFamily: "Poppins, sans-serif", position: "relative" }}
           >
+            {isForgot && forgotStep > 1 && (
+              <IconButton
+                onClick={() => {
+                  if (forgotStep === 2) setForgotStep(1);
+                  else if (forgotStep === 3) setForgotStep(2);
+                  setErrors({});
+                }}
+                sx={{
+                  position: "absolute",
+                  left: 10,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                }}
+              >
+                <i
+                  className="fa-solid fa-arrow-left"
+                  style={{ fontSize: "18px" }}
+                ></i>
+              </IconButton>
+            )}
             {getTitle()}
           </Typography>
         </Zoom>
@@ -228,57 +295,23 @@ const AuthForm = () => {
               </Box>
             )}
 
-            <Box mb={2}>
-              <TextField
-                placeholder="Email address"
-                name="email"
-                fullWidth
-                value={formData.email}
-                onChange={handleChange}
-                error={!!errors.email}
-                helperText={errors.email}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <i
-                        className="fa-solid fa-envelope"
-                        style={{ color: "#888" }}
-                      ></i>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-
-            {currentView !== "forgot" && (
+            {isForgot && forgotStep === 1 && (
               <Box mb={2}>
                 <TextField
-                  placeholder="Password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
+                  placeholder="Email address"
+                  name="email"
                   fullWidth
-                  value={formData.password}
+                  value={formData.email}
                   onChange={handleChange}
-                  error={!!errors.password}
-                  helperText={errors.password}
+                  error={!!errors.email}
+                  helperText={errors.email}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
                         <i
-                          className="fa-solid fa-lock"
+                          className="fa-solid fa-envelope"
                           style={{ color: "#888" }}
                         ></i>
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                          size="small"
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
                       </InputAdornment>
                     ),
                   }}
@@ -286,46 +319,156 @@ const AuthForm = () => {
               </Box>
             )}
 
-            {isSignup && (
+            {isForgot && forgotStep === 2 && (
               <Box mb={2}>
                 <TextField
-                  placeholder="Confirm Password"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Enter OTP"
+                  name="otp"
                   fullWidth
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <i
-                          className="fa-solid fa-lock"
-                          style={{ color: "#888" }}
-                        ></i>
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
-                          edge="end"
-                          size="small"
-                        >
-                          {showConfirmPassword ? (
-                            <VisibilityOff />
-                          ) : (
-                            <Visibility />
-                          )}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  error={!!errors.otp}
+                  helperText={errors.otp}
                 />
               </Box>
+            )}
+
+            {isForgot && forgotStep === 3 && (
+              <>
+                <Box mb={2}>
+                  <TextField
+                    placeholder="New Password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    fullWidth
+                    value={formData.password}
+                    onChange={handleChange}
+                    error={!!errors.password}
+                    helperText={errors.password}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <i
+                            className="fa-solid fa-lock"
+                            style={{ color: "#888" }}
+                          ></i>
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            size="small"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+
+                <Box mb={2}>
+                  <TextField
+                    placeholder="Confirm Password"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    fullWidth
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    error={!!errors.confirmPassword}
+                    helperText={errors.confirmPassword}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <i
+                            className="fa-solid fa-lock"
+                            style={{ color: "#888" }}
+                          ></i>
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            edge="end"
+                            size="small"
+                          >
+                            {showConfirmPassword ? (
+                              <VisibilityOff />
+                            ) : (
+                              <Visibility />
+                            )}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+              </>
+            )}
+
+            {!isForgot && (
+              <>
+                <Box mb={2}>
+                  <TextField
+                    placeholder="Email address"
+                    name="email"
+                    fullWidth
+                    value={formData.email}
+                    onChange={handleChange}
+                    error={!!errors.email}
+                    helperText={errors.email}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <i
+                            className="fa-solid fa-envelope"
+                            style={{ color: "#888" }}
+                          ></i>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+
+                <Box mb={2}>
+                  <TextField
+                    placeholder="Password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    fullWidth
+                    value={formData.password}
+                    onChange={handleChange}
+                    error={!!errors.password}
+                    helperText={errors.password}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <i
+                            className="fa-solid fa-lock"
+                            style={{ color: "#888" }}
+                          ></i>
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            size="small"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+              </>
             )}
 
             {isLogin && (
@@ -344,16 +487,16 @@ const AuthForm = () => {
                 <Link
                   component="button"
                   variant="body2"
-                  onClick={(e) => {
-                    e.preventDefault();
+                  onClick={() => {
                     setCurrentView("forgot");
                     setFormData(defaultForm);
                     setErrors({});
+                    setForgotStep(1);
                   }}
                   underline="hover"
                   sx={{
                     p: 0,
-                    color: "black", // <-- changed to black text
+                    color: "black",
                     fontWeight: 500,
                     "&:hover": { color: "#27AE60" },
                   }}
@@ -404,12 +547,7 @@ const AuthForm = () => {
         </Box>
 
         <Box sx={{ mt: 3 }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
             <Box sx={{ flex: 1, height: "1px", bgcolor: "grey.300" }} />
             <Typography
               variant="body2"
