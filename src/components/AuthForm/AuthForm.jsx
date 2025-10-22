@@ -14,6 +14,7 @@ import {
   Link,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+import FacebookIcon from "@mui/icons-material/Facebook";
 import { toast } from "react-toastify";
 import "./AuthForm.css";
 import {
@@ -30,6 +31,7 @@ const AuthForm = () => {
   const [loading, setLoading] = useState(false);
   const [forgotStep, setForgotStep] = useState(1); 
   const [otp, setOtp] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
 
   const defaultForm = {
     name: "",
@@ -37,7 +39,6 @@ const AuthForm = () => {
     password: "",
     confirmPassword: "",
   };
-
   const [formData, setFormData] = useState(defaultForm);
   const [errors, setErrors] = useState({});
 
@@ -53,20 +54,27 @@ const AuthForm = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (isForgot && forgotStep === 1) {
-      if (!formData.email.trim() || !emailRegex.test(formData.email.trim())) {
-        newErrors.email = "Please provide a valid email";
-      }
+    if (!formData.email.trim()) {
+      newErrors.email = "Please provide a valid email";
+    } else if (!emailRegex.test(formData.email.trim())) {
+      newErrors.email = "Please provide a valid email";
     }
 
-    if (isSignup || isLogin) {
-      if (!formData.email.trim() || !emailRegex.test(formData.email.trim())) {
-        newErrors.email = "Please provide a valid email";
+    if (currentView !== "forgot") {
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+      } else {
+        if (formData.password.length < 8)
+          newErrors.password = "Password must be at least 8 characters long";
+        else if (!/[A-Z]/.test(formData.password))
+          newErrors.password = "Password must contain an uppercase letter";
+        else if (!/[a-z]/.test(formData.password))
+          newErrors.password = "Password must contain a lowercase letter";
+        else if (!/\d/.test(formData.password))
+          newErrors.password = "Password must contain a number";
+        else if (!/[!@#$%^&*(),.?\":{}|<>]/.test(formData.password))
+          newErrors.password = "Password must contain a special character";
       }
-    }
-
-    if ((isSignup || isLogin) && !formData.password) {
-      newErrors.password = "Password is required";
     }
 
     if (isSignup) {
@@ -100,8 +108,10 @@ const AuthForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
-    setLoading(true);
 
+    if (!validateForm()) return;
+
+    setLoading(true);
     try {
       if (isForgot) {
         if (forgotStep === 1) {
@@ -111,21 +121,18 @@ const AuthForm = () => {
         } else if (forgotStep === 2) {
           if (!otp) {
             setErrors({ otp: "OTP is required" });
-            setLoading(false);
             return;
           }
           const verifyResponse = await verifyOtp({
             email: formData.email.trim(),
             otp,
           });
-          if (!verifyResponse.data.success)
-            throw new Error("Invalid OTP! Try again.");
+          if (!verifyResponse.data.success) throw new Error("Invalid OTP!");
           toast.success("OTP verified! Please enter your new password.");
           setForgotStep(3);
         } else if (forgotStep === 3) {
           if (!formData.password || !formData.confirmPassword) {
             setErrors({ password: "Password fields cannot be empty" });
-            setLoading(false);
             return;
           }
           const resetResponse = await resetPassword({
@@ -142,25 +149,29 @@ const AuthForm = () => {
           setForgotStep(1);
           setCurrentView("login");
         }
-      }
-
-      else if (isLogin) {
+      } else if (isLogin) {
         const res = await loginUser({
           email: formData.email.trim(),
           password: formData.password,
         });
-        const { token, message } = res.data;
-        if (token) localStorage.setItem("token", token);
-        toast.success(message || "Login successful!");
-      }
 
-      else if (isSignup) {
+        const { token, message } = res.data;
+        if (token) {
+          if (rememberMe) {
+            localStorage.setItem("token", token); 
+          } else {
+            sessionStorage.setItem("token", token); 
+          }
+        }
+        toast.success(message || "Login successful!");
+      } else {
         const res = await signupUser({
           name: formData.name.trim(),
           email: formData.email.trim(),
           password: formData.password,
           confirmPassword: formData.confirmPassword,
         });
+
         toast.success(res.data.message || "Signup successful!");
         setCurrentView("login");
         setFormData(defaultForm);
@@ -230,7 +241,6 @@ const AuthForm = () => {
           setCurrentView("login");
           setErrors({});
           setFormData(defaultForm);
-          setForgotStep(1);
         },
       };
 
@@ -238,13 +248,7 @@ const AuthForm = () => {
     <Box className="auth-container">
       <Paper elevation={6} className="auth-box">
         <Zoom in={true}>
-          <Typography
-            variant="h5"
-            fontWeight="bold"
-            align="center"
-            mb={3}
-            sx={{ fontFamily: "Poppins, sans-serif", position: "relative" }}
-          >
+          <Box sx={{ position: "relative", mb: 3 }}>
             {isForgot && forgotStep > 1 && (
               <IconButton
                 onClick={() => {
@@ -254,9 +258,10 @@ const AuthForm = () => {
                 }}
                 sx={{
                   position: "absolute",
-                  left: 10,
-                  top: "50%",
-                  transform: "translateY(-50%)",
+                  top: 0,
+                  left: 0,
+                  color: "black",
+                  "&:hover": { color: "#27AE60" },
                 }}
               >
                 <i
@@ -265,8 +270,18 @@ const AuthForm = () => {
                 ></i>
               </IconButton>
             )}
-            {getTitle()}
-          </Typography>
+
+            <Typography
+              variant="h5"
+              fontWeight="bold"
+              align="center"
+              sx={{
+                fontFamily: "Poppins, sans-serif",
+              }}
+            >
+              {getTitle()}
+            </Typography>
+          </Box>
         </Zoom>
 
         <Fade in={true}>
@@ -286,6 +301,30 @@ const AuthForm = () => {
                       <InputAdornment position="start">
                         <i
                           className="fa-solid fa-user"
+                          style={{ color: "#888" }}
+                        ></i>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
+            )}
+
+            {!isForgot && (
+              <Box mb={2}>
+                <TextField
+                  placeholder="Email address"
+                  name="email"
+                  fullWidth
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <i
+                          className="fa-solid fa-envelope"
                           style={{ color: "#888" }}
                         ></i>
                       </InputAdornment>
@@ -326,7 +365,10 @@ const AuthForm = () => {
                   name="otp"
                   fullWidth
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e) => {
+                    setOtp(e.target.value);
+                    setErrors((prev) => ({ ...prev, otp: "" }));
+                  }}
                   error={!!errors.otp}
                   helperText={errors.otp}
                 />
@@ -368,7 +410,6 @@ const AuthForm = () => {
                     }}
                   />
                 </Box>
-
                 <Box mb={2}>
                   <TextField
                     placeholder="Confirm Password"
@@ -411,64 +452,82 @@ const AuthForm = () => {
               </>
             )}
 
-            {!isForgot && (
-              <>
-                <Box mb={2}>
-                  <TextField
-                    placeholder="Email address"
-                    name="email"
-                    fullWidth
-                    value={formData.email}
-                    onChange={handleChange}
-                    error={!!errors.email}
-                    helperText={errors.email}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <i
-                            className="fa-solid fa-envelope"
-                            style={{ color: "#888" }}
-                          ></i>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Box>
+            {currentView !== "forgot" && (
+              <Box mb={2}>
+                <TextField
+                  placeholder="Password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  fullWidth
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={!!errors.password}
+                  helperText={errors.password}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <i
+                          className="fa-solid fa-lock"
+                          style={{ color: "#888" }}
+                        ></i>
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
+            )}
 
-                <Box mb={2}>
-                  <TextField
-                    placeholder="Password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    fullWidth
-                    value={formData.password}
-                    onChange={handleChange}
-                    error={!!errors.password}
-                    helperText={errors.password}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <i
-                            className="fa-solid fa-lock"
-                            style={{ color: "#888" }}
-                          ></i>
-                        </InputAdornment>
-                      ),
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowPassword(!showPassword)}
-                            edge="end"
-                            size="small"
-                          >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Box>
-              </>
+            {isSignup && (
+              <Box mb={2}>
+                <TextField
+                  placeholder="Confirm Password"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  fullWidth
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  error={!!errors.confirmPassword}
+                  helperText={errors.confirmPassword}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <i
+                          className="fa-solid fa-lock"
+                          style={{ color: "#888" }}
+                        ></i>
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                          edge="end"
+                          size="small"
+                        >
+                          {showConfirmPassword ? (
+                            <VisibilityOff />
+                          ) : (
+                            <Visibility />
+                          )}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
             )}
 
             {isLogin && (
@@ -481,17 +540,24 @@ const AuthForm = () => {
                 }}
               >
                 <FormControlLabel
-                  control={<Checkbox size="small" />}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
+                  }
                   label="Remember me"
                 />
+
                 <Link
                   component="button"
                   variant="body2"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     setCurrentView("forgot");
                     setFormData(defaultForm);
                     setErrors({});
-                    setForgotStep(1);
                   }}
                   underline="hover"
                   sx={{
@@ -547,7 +613,12 @@ const AuthForm = () => {
         </Box>
 
         <Box sx={{ mt: 3 }}>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             <Box sx={{ flex: 1, height: "1px", bgcolor: "grey.300" }} />
             <Typography
               variant="body2"
