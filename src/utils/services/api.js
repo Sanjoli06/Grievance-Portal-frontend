@@ -39,6 +39,11 @@ export const getAllUsers = async () => {
   return res;
 };
 
+export const getAllDepartments = async () => {
+  const res = await axios.get(`${API_BASE}/admin/departments`, getAuthHeader());
+  return res;
+};
+
 export const updateUserDetails = async (id, data) => {
   const res = await axios.put(`${API_BASE}/admin/users/${id}`, data, getAuthHeader());
   return res;
