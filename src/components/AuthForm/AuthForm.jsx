@@ -25,6 +25,9 @@ import {
   resetPassword,
 } from "../../utils/services/api";
 import SocialIcon from "../SocialIcons/SocialIcon";
+import { Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+
 
 const AuthForm = () => {
   const [currentView, setCurrentView] = useState("login"); 
@@ -32,6 +35,9 @@ const AuthForm = () => {
   const [forgotStep, setForgotStep] = useState(1); 
   const [otp, setOtp] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+
+  const navigate = useNavigate();
+
 
   const defaultForm = {
     name: "",
@@ -114,6 +120,8 @@ const AuthForm = () => {
     setLoading(true);
     try {
       if (isForgot) {
+        console.log("in the forgot")
+
         if (forgotStep === 1) {
           const otpResponse = await sendOtp({ email: formData.email.trim() });
           toast.success(otpResponse.data.message || "OTP sent to your email!");
@@ -150,20 +158,19 @@ const AuthForm = () => {
           setCurrentView("login");
         }
       } else if (isLogin) {
+        console.log("in the login")
         const res = await loginUser({
           email: formData.email.trim(),
           password: formData.password,
         });
 
+
         const { token, message } = res.data;
         if (token) {
-          if (rememberMe) {
-            localStorage.setItem("token", token); 
-          } else {
-            sessionStorage.setItem("token", token); 
-          }
+          localStorage.setItem("token", token); 
         }
         toast.success(message || "Login successful!");
+        navigate("/admin");
       } else {
         const res = await signupUser({
           name: formData.name.trim(),
@@ -552,6 +559,7 @@ const AuthForm = () => {
 
                 <Link
                   component="button"
+                  type="button"
                   variant="body2"
                   onClick={(e) => {
                     e.preventDefault();
