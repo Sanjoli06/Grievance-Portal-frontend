@@ -6,12 +6,15 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import theme from "./theme";
+import { BrowserRouter} from 'react-router-dom';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
      <ThemeProvider theme={theme}>
       <CssBaseline />
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
      <ToastContainer position="top-center" autoClose={2000} />
     </ThemeProvider>
   </StrictMode>,
