@@ -1,105 +1,103 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import AuthPage from "./pages/Auth/AuthPage";
-import AdminDashboard from "./pages/Admin/AdminDashboard";
-import ProtectedRoute from "./components/protectedRoutes/ProtectedRoute";
-import Sidebar from "./components/Common/SideBar";
-import { jwtDecode } from "jwt-decode"; // install this: npm install jwt-decode
-import { Box } from "@mui/material";
-
-const App = () => {
+import { Box, CssBaseline } from "@mui/material";
+import { jwtDecode } from "jwt-decode";
+import AuthPage from "./pages/Auth/AuthPage.jsx";
+import AdminDashboard from "./pages/Admin/AdminDashboard.jsx";
+import ProtectedRoute from "./components/protectedRoutes/ProtectedRoute.jsx";
+import ResponsiveSidebar from "./components/Common/ResposiveSidebar.jsx";
+const DRAWER_FULL = 240;
+const DRAWER_COLLAPSED = 70;
+export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  const hideHeaderFooter = ["/login", "/signup"].includes(location.pathname);
+  const [role, setRole] = useState(null); 
+  const [collapsed, setCollapsed] = useState(false);
 
-  const getRoleFromToken = useMemo(() => {
+  useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login");
-      return null;
+      setRole(null);
+      if (!["/login", "/signup"].includes(location.pathname)) {
+        navigate("/login", { replace: true });
+      }
+      return;
     }
-
     try {
       const decoded = jwtDecode(token);
-      const roleId = decoded.role;
-      if (roleId === 1) return "citizen";
-      if (roleId === 2) return "agent";
-      if (roleId === 3) return "admin";
-      return "citizen";
-    } catch (error) {
-      console.error("Invalid token:", error);
+      const map = { 1: "citizen", 2: "agent", 3: "admin" };
+      setRole(map[decoded.role] || "citizen");
+    } catch (e) {
+      console.error("Invalid token", e);
       localStorage.removeItem("token");
-      navigate("/login");
-      return null;
+      setRole(null);
+      navigate("/login", { replace: true });
     }
-  }, [navigate]);
-
-  const userRole = getRoleFromToken;
-
+  }, [navigate, location.pathname]);
   const handleLogout = () => {
     localStorage.clear();
-    localStorage.removeItem("token");
-    navigate("/login"); // redirect to login page
+    setRole(null);
+    navigate("/login", { replace: true });
   };
-
-  if (hideHeaderFooter || !userRole) {
+  const isAuthPage = ["/login", "/signup"].includes(location.pathname);
+  if (!role || isAuthPage) {
     return (
       <Routes>
-        {/* Default route (Login / Signup page) */}
         <Route path="/login" element={<AuthPage />} />
         <Route path="/signup" element={<AuthPage />} />
-        {/* Redirect any unknown route to login if no token */}
-        <Route path="*" element={<Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
   }
-
+  const currentDrawerWidth = collapsed ? DRAWER_COLLAPSED : DRAWER_FULL;
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar role={userRole} onLogout={handleLogout} />
+      <CssBaseline />
+      <ResponsiveSidebar
+        role={role}
+        onLogout={handleLogout}
+        onCollapseChange={setCollapsed}
+      />
+
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, sm: 3 },
-          transition: "margin-left 0.6s cubic-bezier(0.4, 0, 0.2, 1)", // Smooth shift with sidebar width change
-          overflowX: "hidden", // Prevent horizontal scroll
+          transition: "margin-left 0.3s ease, width 0.3s ease",
+          marginLeft: { xs: 0, md: `${currentDrawerWidth/8}px` },
+          width: { xs: "100%", md: `calc(100% - ${currentDrawerWidth}px)` },
+          pt: { xs: 2, sm: 3 },
+          pb: 3,
+          overflowX: "hidden",
+          marginTop: `${12}px`,
         }}
       >
         <Routes>
           <Route
             path="/"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["admin", "agent", "citizen"]}>
                 <AdminDashboard />
               </ProtectedRoute>
             }
           />
-          {/* Admin Dashboard (Protected Route Example) */}
           <Route
             path="/admin"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminDashboard />
               </ProtectedRoute>
             }
           />
-
-          {/* Redirect any unknown route to home */}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Box>
     </Box>
   );
-};
-
-
-
-export default App;
+}

@@ -24,7 +24,7 @@ import {
   verifyOtp,
   resetPassword,
 } from "../../utils/services/api";
-import SocialIcon from "../SocialIcons/SocialIcon";
+import SocialIcon from "./SocialIcons/SocialIcon";
 import { Navigate } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 
